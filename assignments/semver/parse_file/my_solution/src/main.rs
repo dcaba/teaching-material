@@ -96,10 +96,7 @@ fn main() -> Result<(), std::io::Error> {
             ),
         };
         // the rest is a list of &str slices that each can be MAPPED INTO a SemVer!
-        let mut versions: Vec<SemVer> = vec![];
-        while let Some(elem) = parts.next() {
-            versions.push(elem.into());
-        }
+        let versions: Vec<SemVer> = parts.map(|version_str| version_str.into()).collect();
         // we're still in iterator land - time to collect and push the result to our program vec
         programs.push(Program {
             name: program_name,
