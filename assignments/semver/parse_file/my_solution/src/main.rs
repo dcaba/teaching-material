@@ -84,11 +84,11 @@ fn main() -> Result<(), std::io::Error> {
         // if the line can be read (it might be invalid data), split it on ","
         let line = match line {
             Ok(line) => line,
-            Err(why) => panic!("error reading {}: {}", file_path, why),
+            Err(why) => panic!("error reading {} line {}: {}", file_path, line_number, why),
         };
-        let mut line = line.split(",");
+        let mut parts = line.split(",");
         // take the first element of your split - that's the name
-        let program_name = match line.next() {
+        let program_name = match parts.next() {
             Some(value) => value.to_string(),
             None => panic!(
                 "error reading {}: line {} did not contain the first element",
@@ -97,8 +97,8 @@ fn main() -> Result<(), std::io::Error> {
         };
         // the rest is a list of &str slices that each can be MAPPED INTO a SemVer!
         let mut versions: Vec<SemVer> = vec![];
-        while let Some(elem) = line.next() {
-            versions.push(SemVer::from(elem));
+        while let Some(elem) = parts.next() {
+            versions.push(elem.into());
         }
         // we're still in iterator land - time to collect and push the result to our program vec
         programs.push(Program {
