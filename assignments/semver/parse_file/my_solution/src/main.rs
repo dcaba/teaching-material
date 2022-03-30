@@ -3,8 +3,9 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
+use serde::{Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 struct SemVer {
     major: u16,
     minor: u16,
@@ -23,17 +24,6 @@ impl SemVer {
     fn new_short(major: u16) -> SemVer {
         Self::new(major, 0, 0)
     }
-
-    // fn info(&self) {
-    //     println!(
-    //         "hi, I'm a semver: {}.{}.{}",
-    //         self.major, self.minor, self.patch
-    //     )
-    // }
-
-    // fn patch(&mut self) -> &mut u16 {
-    //     &mut self.patch
-    // }
 }
 
 impl Default for SemVer {
@@ -60,7 +50,7 @@ impl From<&str> for SemVer {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct Program {
     name: String,
     release_history: Vec<SemVer>,
@@ -107,15 +97,17 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     // finally, print the program vec.
-    for program in programs {
-        let header = format!("Program {} release history", program.name);
-        println!("{}", "-".repeat(header.len()));
-        println!("{}", header);
-        println!("{}", "-".repeat(header.len()));
-        for version in program.release_history {
-            println!("{}", version)
-        }
-    }
+    // for program in programs {
+    //     let header = format!("Program {} release history", program.name);
+    //     println!("{}", "-".repeat(header.len()));
+    //     println!("{}", header);
+    //     println!("{}", "-".repeat(header.len()));
+    //     for version in program.release_history {
+    //         println!("{}", version)
+    //     }
+    // }
+    let json = serde_json::to_string_pretty(&programs)?;
+    println!("{}",json);
 
     Ok(())
 }
