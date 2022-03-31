@@ -1,68 +1,33 @@
 use std::{
-    fmt::Display,
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Write},
 };
-use serde::{Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-struct SemVer {
-    major: u16,
-    minor: u16,
-    patch: u16,
-}
-
-impl SemVer {
-    fn new(major: u16, minor: u16, patch: u16) -> SemVer {
-        SemVer {
-            major,
-            minor,
-            patch,
-        }
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let backup_file_path = "db.json";
+    let backup_file = File::open(backup_file_path);
+    let mut programs: Vec<semver::Program> = vec![];
+    match backup_file {
+        Ok(backup_file) => programs = from_backup(backup_file)?,
+        Err(_) => from_release_txt("releases.txt", &mut programs),
     }
 
-    fn new_short(major: u16) -> SemVer {
-        Self::new(major, 0, 0)
-    }
+    let programs_export = serde_json::to_string_pretty(&programs)?;
+    println!("{}", programs_export);
+
+    let mut backup_file = File::create(backup_file_path)?;
+    backup_file.write_all(programs_export.as_bytes())?;
+    Ok(())
 }
 
-impl Default for SemVer {
-    fn default() -> Self {
-        Self::new_short(1)
-    }
+fn from_backup(backup_file: File) -> Result<Vec<semver::Program>, Box<dyn std::error::Error>> {
+    let reader = BufReader::new(backup_file);
+    let programs = serde_json::from_reader(reader)?;
+    Ok(programs)
 }
 
-impl Display for SemVer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
-    }
-}
-
-impl From<&str> for SemVer {
-    fn from(s: &str) -> Self {
-        let vs: Vec<u16> = s.split(".").filter_map(|item| item.parse().ok()).collect();
-        assert!(vs.len() == 3);
-        SemVer {
-            major: vs[0],
-            minor: vs[1],
-            patch: vs[2],
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-struct Program {
-    name: String,
-    release_history: Vec<SemVer>,
-}
-
-fn main() -> Result<(), std::io::Error> {
-    // create a `Vec` to hold the list of programs
-    let mut programs: Vec<Program> = vec![];
-
+fn from_release_txt(file_path: &str, programs: &mut Vec<semver::Program>) {
     // open "releases.txt", bail on error
-    let file_path = "releases.txt";
-
     let file = match File::open(file_path) {
         Err(why) => panic!("couldn't open {}: {}", file_path, why),
         Ok(file) => file,
@@ -86,28 +51,10 @@ fn main() -> Result<(), std::io::Error> {
             ),
         };
         // the rest is a list of &str slices that each can be MAPPED INTO a SemVer!
-        let versions: Vec<SemVer> = parts.map(|version_str| version_str.into()).collect();
+        let versions: Vec<semver::SemVer> = parts.map(|version_str| version_str.into()).collect();
         // we're still in iterator land - time to collect and push the result to our program vec
-        programs.push(Program {
-            name: program_name,
-            release_history: versions,
-        });
+        programs.push(semver::Program::new(program_name, versions));
 
         line_number += 1;
     }
-
-    // finally, print the program vec.
-    // for program in programs {
-    //     let header = format!("Program {} release history", program.name);
-    //     println!("{}", "-".repeat(header.len()));
-    //     println!("{}", header);
-    //     println!("{}", "-".repeat(header.len()));
-    //     for version in program.release_history {
-    //         println!("{}", version)
-    //     }
-    // }
-    let json = serde_json::to_string_pretty(&programs)?;
-    println!("{}",json);
-
-    Ok(())
 }
